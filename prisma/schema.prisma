@@ -1,0 +1,246 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum DocumentStatus {
+  uploaded
+  queued
+  normalizing
+  rasterizing
+  optimizing
+  ready
+  failed
+  deleted
+}
+
+enum ConversionJobStatus {
+  pending
+  running
+  retry_wait
+  done
+  failed
+}
+
+enum PageEffect {
+  magazine
+  book
+  album
+  notebook
+  slider
+  cards
+  coverflow
+  one_page
+}
+
+enum PageDisposition {
+  adaptive
+  always_double_page
+  always_single_page
+}
+
+enum LogoPosition {
+  top_left
+  top_center
+  top_right
+  center_left
+  center
+  center_right
+  bottom_left
+  bottom_center
+  bottom_right
+}
+
+enum AdminRole {
+  super_admin
+  admin
+  moderator
+  support
+}
+
+enum AdminStatus {
+  active
+  suspended
+  disabled
+}
+
+model UserAdmin {
+  id String @id @default(cuid())
+
+  // PROFILE
+  firstName    String
+  lastName     String
+  email        String @unique
+  passwordHash String
+
+  // ACCESS
+  role   AdminRole   @default(admin)
+  status AdminStatus @default(active)
+
+  // SECURITY
+  lastLoginAt    DateTime?
+  lastLoginIp    String?
+  failedAttempts Int       @default(0)
+
+  // OPTIONAL
+  avatarUrl String?
+
+  // AUDIT
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([email])
+  @@index([role])
+  @@index([status])
+}
+
+model Document {
+  id              String          @id @default(cuid())
+  ownerId         String?
+  status          DocumentStatus  @default(uploaded)
+  originalName    String
+  mimeType        String
+  sizeBytes       BigInt
+  sourcePath      String
+  /** URL publique Supabase Storage (remplie si sync activée) */
+  sourcePublicUrl String?
+  pdfPath         String?
+  pdfPublicUrl    String?
+  pageCount       Int             @default(0)
+  errorMessage    String?
+  backgroundColor String?
+  backgroundImage String?
+  logoImage       String?
+  logoPosition    LogoPosition    @default(top_left)
+  logoSize        Int?
+  logoOpacity     Float           @default(1)
+  logoLinkUrl     String?
+  pageEffect      PageEffect      @default(notebook)
+  pageDisposition PageDisposition @default(adaptive)
+  pageTurnSettings Json?
+  allowDownload   Boolean         @default(true)
+  allowShare      Boolean         @default(true)
+  allowPrint      Boolean         @default(true)
+  allowFullscreen Boolean         @default(true)
+  allowPrevNext   Boolean         @default(true)
+  allowZoom       Boolean         @default(true)
+  allowFirstPage  Boolean         @default(true)
+  allowLastPage   Boolean         @default(true)
+  allowSearchText Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  deletedAt       DateTime?
+  pages           DocumentPage[]
+  conversionJob   ConversionJob?
+  shares          DocumentShare[]
+  publicLinks     PublicLink[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model DocumentPage {
+  id         String   @id @default(cuid())
+  documentId String
+  pageIndex  Int
+  imagePath  String
+  imagePublicUrl String?
+  thumbPath  String?
+  thumbPublicUrl String?
+  width      Int
+  height     Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, pageIndex])
+  @@index([documentId])
+}
+
+model ConversionJob {
+  id          String              @id @default(cuid())
+  documentId  String              @unique
+  status      ConversionJobStatus @default(pending)
+  step        String              @default("queued")
+  progress    Int                 @default(0)
+  attempt     Int                 @default(0)
+  maxAttempts Int                 @default(5)
+  runAfter    DateTime            @default(now())
+  lockedAt    DateTime?
+  lockedBy    String?
+  startedAt   DateTime?
+  endedAt     DateTime?
+  lastError   String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  document    Document            @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([status, runAfter])
+}
+
+model DocumentShare {
+  id              String          @id @default(cuid())
+  documentId      String
+  token           String          @unique
+  title           String?
+  isActive        Boolean         @default(true)
+  expiresAt       DateTime?
+  passwordHash    String?
+  maxViews        Int?
+  viewCount       Int             @default(0)
+  backgroundColor String?
+  backgroundImage String?
+  logoImage       String?
+  logoPosition    LogoPosition    @default(top_left)
+  logoSize        Int?
+  logoOpacity     Float           @default(1)
+  logoLinkUrl     String?
+  pageEffect       PageEffect      @default(notebook)
+  pageDisposition  PageDisposition @default(adaptive)
+  pageTurnSettings Json?
+  allowDownload    Boolean         @default(true)
+  allowShare       Boolean         @default(true)
+  allowPrint       Boolean         @default(true)
+  allowFullscreen  Boolean         @default(true)
+  allowPrevNext    Boolean         @default(true)
+  allowZoom        Boolean         @default(true)
+  allowFirstPage   Boolean         @default(true)
+  allowLastPage    Boolean         @default(true)
+  allowSearchText  Boolean         @default(false)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  document         Document        @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([isActive, expiresAt])
+}
+
+/// Lien public dédié (ex. slug court pour campagne / QR code).
+/// Distinct de `DocumentShare` : pas de surcharges d’UI ; focus sur l’identifiant d’URL et la durée de vie.
+model PublicLink {
+  id         String    @id @default(cuid())
+  documentId String
+  /// Segment d’URL unique (ex. `catalogue-ete-2026`), en minuscules sans espaces.
+  slug       String    @unique
+  title      String?
+  isActive   Boolean   @default(true)
+  expiresAt  DateTime?
+  /// Optionnel : accès protégé sans dupliquer toute la config d’un share.
+  passwordHash String?
+  viewCount  Int       @default(0)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  document   Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([isActive, expiresAt])
+}
