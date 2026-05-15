@@ -6,8 +6,10 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . ./
-ENV DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres \
-    DIRECT_URL=postgresql://postgres:postgres@localhost:5432/postgres
+ARG DATABASE_URL
+ARG DIRECT_URL
+ENV DATABASE_URL=${DATABASE_URL} \
+    DIRECT_URL=${DIRECT_URL}
 RUN npm run prisma:generate
 RUN npm run build
 RUN npm prune --omit=dev
