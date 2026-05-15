@@ -1,3 +1,94 @@
+# version: 2.1
+
+# jobs:
+#   typecheck:
+#     docker:
+#       - image: cimg/node:22.13
+#     environment:
+#       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+#       DIRECT_URL: postgresql://postgres:postgres@localhost:5432/postgres
+#     steps:
+#       - checkout
+#       - restore_cache:
+#           keys:
+#             - npm-v1-{{ checksum "package-lock.json" }}
+#             - npm-v1-
+#       - run:
+#           name: Install dependencies
+#           command: npm ci
+#       - save_cache:
+#           key: npm-v1-{{ checksum "package-lock.json" }}
+#           paths:
+#             - ~/.npm
+#       - run:
+#           name: Generate Prisma client
+#           command: npm run prisma:generate
+#       - run:
+#           name: Build TypeScript
+#           command: npm run build
+
+#   docker-publish:
+#     docker:
+#       - image: cimg/base:stable
+#     steps:
+#       - checkout
+#       - setup_remote_docker
+#       - run:
+#           name: Validate Docker Hub configuration
+#           command: |
+#             : "${DOCKERHUB_USERNAME:?Set DOCKERHUB_USERNAME in CircleCI}"
+#             DOCKER_PASSWORD="${DOCKERHUB_TOKEN:-${DOCKERHUB_PASSWORD:-}}"
+#             if [ -z "${DOCKER_PASSWORD}" ]; then
+#               echo "Set DOCKERHUB_TOKEN or DOCKERHUB_PASSWORD in CircleCI"
+#               exit 1
+#             fi
+#       - run:
+#           name: Build and push Docker image
+#           command: |
+#             DOCKER_PASSWORD="${DOCKERHUB_TOKEN:-${DOCKERHUB_PASSWORD:-}}"
+#             IMAGE_NAME="${DOCKERHUB_REPOSITORY:-${DOCKERHUB_USERNAME}/${CIRCLE_PROJECT_REPONAME}}"
+#             SHORT_SHA="${CIRCLE_SHA1:0:7}"
+#             SAFE_BRANCH="$(printf '%s' "${CIRCLE_BRANCH:-detached}" | tr '/[:upper:]' '-[:lower:]' | tr -cd 'a-z0-9_.-')"
+#             IMAGE_TAG="${SAFE_BRANCH}-${SHORT_SHA}"
+
+#             echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKERHUB_USERNAME}" --password-stdin
+
+#             docker build --pull -t "${IMAGE_NAME}:${IMAGE_TAG}" .
+
+#             if [ "${CIRCLE_BRANCH:-}" = "main" ] || [ "${CIRCLE_BRANCH:-}" = "master" ]; then
+#               docker tag "${IMAGE_NAME}:${IMAGE_TAG}" "${IMAGE_NAME}:latest"
+#             fi
+
+#             if [ -n "${CIRCLE_TAG:-}" ]; then
+#               VERSION_TAG="${CIRCLE_TAG#v}"
+#               docker tag "${IMAGE_NAME}:${IMAGE_TAG}" "${IMAGE_NAME}:${VERSION_TAG}"
+#             fi
+
+#             docker push "${IMAGE_NAME}:${IMAGE_TAG}"
+
+#             if [ "${CIRCLE_BRANCH:-}" = "main" ] || [ "${CIRCLE_BRANCH:-}" = "master" ]; then
+#               docker push "${IMAGE_NAME}:latest"
+#             fi
+
+#             if [ -n "${CIRCLE_TAG:-}" ]; then
+#               docker push "${IMAGE_NAME}:${VERSION_TAG}"
+#             fi
+
+# workflows:
+#   build-and-publish:
+#     jobs:
+#       - typecheck:
+#           filters:
+#             tags:
+#               only: /.*/
+#       - docker-publish:
+#           requires:
+#             - typecheck
+#           filters:
+#             tags:
+#               only: /^v.*/
+
+
 version: 2.1
 
 jobs:
@@ -9,20 +100,25 @@ jobs:
       DIRECT_URL: postgresql://postgres:postgres@localhost:5432/postgres
     steps:
       - checkout
+
       - restore_cache:
           keys:
             - npm-v1-{{ checksum "package-lock.json" }}
             - npm-v1-
+
       - run:
           name: Install dependencies
           command: npm ci
+
       - save_cache:
           key: npm-v1-{{ checksum "package-lock.json" }}
           paths:
             - ~/.npm
+
       - run:
           name: Generate Prisma client
           command: npm run prisma:generate
+
       - run:
           name: Build TypeScript
           command: npm run build
@@ -33,46 +129,41 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
+
       - run:
           name: Validate Docker Hub configuration
           command: |
             : "${DOCKERHUB_USERNAME:?Set DOCKERHUB_USERNAME in CircleCI}"
+
             DOCKER_PASSWORD="${DOCKERHUB_TOKEN:-${DOCKERHUB_PASSWORD:-}}"
+
             if [ -z "${DOCKER_PASSWORD}" ]; then
               echo "Set DOCKERHUB_TOKEN or DOCKERHUB_PASSWORD in CircleCI"
               exit 1
             fi
+
       - run:
           name: Build and push Docker image
           command: |
             DOCKER_PASSWORD="${DOCKERHUB_TOKEN:-${DOCKERHUB_PASSWORD:-}}"
+
             IMAGE_NAME="${DOCKERHUB_REPOSITORY:-${DOCKERHUB_USERNAME}/${CIRCLE_PROJECT_REPONAME}}"
+
             SHORT_SHA="${CIRCLE_SHA1:0:7}"
+
             SAFE_BRANCH="$(printf '%s' "${CIRCLE_BRANCH:-detached}" | tr '/[:upper:]' '-[:lower:]' | tr -cd 'a-z0-9_.-')"
+
             IMAGE_TAG="${SAFE_BRANCH}-${SHORT_SHA}"
 
             echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKERHUB_USERNAME}" --password-stdin
 
-            docker build --pull -t "${IMAGE_NAME}:${IMAGE_TAG}" .
-
-            if [ "${CIRCLE_BRANCH:-}" = "main" ] || [ "${CIRCLE_BRANCH:-}" = "master" ]; then
-              docker tag "${IMAGE_NAME}:${IMAGE_TAG}" "${IMAGE_NAME}:latest"
-            fi
-
-            if [ -n "${CIRCLE_TAG:-}" ]; then
-              VERSION_TAG="${CIRCLE_TAG#v}"
-              docker tag "${IMAGE_NAME}:${IMAGE_TAG}" "${IMAGE_NAME}:${VERSION_TAG}"
-            fi
+            docker build --pull \
+              -t "${IMAGE_NAME}:${IMAGE_TAG}" \
+              -t "${IMAGE_NAME}:latest" \
+              .
 
             docker push "${IMAGE_NAME}:${IMAGE_TAG}"
-
-            if [ "${CIRCLE_BRANCH:-}" = "main" ] || [ "${CIRCLE_BRANCH:-}" = "master" ]; then
-              docker push "${IMAGE_NAME}:latest"
-            fi
-
-            if [ -n "${CIRCLE_TAG:-}" ]; then
-              docker push "${IMAGE_NAME}:${VERSION_TAG}"
-            fi
+            docker push "${IMAGE_NAME}:latest"
 
 workflows:
   build-and-publish:
@@ -81,9 +172,10 @@ workflows:
           filters:
             tags:
               only: /.*/
+
       - docker-publish:
           requires:
             - typecheck
           filters:
             tags:
-              only: /^v.*/
+              only: /.*/
