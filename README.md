@@ -18,6 +18,13 @@
 - `npm run prisma:generate` generate Prisma client
 - `npm run prisma:migrate` apply migrations
 
+## CircleCI Docker Hub
+- `DOCKERHUB_USERNAME`: Docker Hub username
+- `DOCKERHUB_TOKEN` or `DOCKERHUB_PASSWORD`: Docker Hub access token/password
+- `DOCKERHUB_REPOSITORY` optional full image name, for example `username/agreader-api`
+
+The CircleCI workflow builds the API, builds the Docker image, and pushes it to Docker Hub. Branch builds are tagged with `<branch>-<short-sha>`, `main`/`master` also pushes `latest`, and git tags like `v1.2.3` also push `1.2.3`.
+
 ## API
 - `POST /v1/documents/upload` multipart (`file`)
 - `GET /v1/documents/:id`
