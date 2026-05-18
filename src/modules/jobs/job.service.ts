@@ -44,6 +44,7 @@ export class JobService {
         status: ConversionJobStatus.done,
         step: 'done',
         progress: 100,
+        lastError: null,
         endedAt: new Date(),
         lockedAt: null,
         lockedBy: null,

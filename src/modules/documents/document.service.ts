@@ -49,8 +49,10 @@ export class DocumentService {
       mimeType: doc.mimeType,
       sizeBytes: doc.sizeBytes.toString(),
       pageCount: doc.pageCount,
-      sourceUrl: storageService.toPublicUrl(doc.sourcePath),
-      pdfUrl: doc.pdfPath ? storageService.toPublicUrl(doc.pdfPath) : null,
+      sourceUrl: doc.sourcePublicUrl ?? storageService.toPublicUrl(doc.sourcePath),
+      pdfUrl: doc.pdfPath
+        ? (doc.pdfPublicUrl ?? storageService.toPublicUrl(doc.pdfPath))
+        : null,
       errorMessage: doc.errorMessage,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
@@ -95,10 +97,12 @@ export class DocumentService {
       pageCount: doc.pageCount,
       pages: doc.pages.map((p) => ({
         pageIndex: p.pageIndex,
-        imageUrl: storageService.toPublicUrl(p.imagePath),
+        imageUrl: p.imagePublicUrl ?? storageService.toPublicUrl(p.imagePath),
         width: p.width,
         height: p.height,
-        thumbUrl: p.thumbPath ? storageService.toPublicUrl(p.thumbPath) : null,
+        thumbUrl: p.thumbPath
+          ? (p.thumbPublicUrl ?? storageService.toPublicUrl(p.thumbPath))
+          : null,
       })),
     };
   }
@@ -283,7 +287,9 @@ export class DocumentService {
             storageService.toPublicUrl(doc.pages[0].imagePath))
           : null,
 
-      pdfUrl: doc.pdfPath ? storageService.toPublicUrl(doc.pdfPath) : null,
+      pdfUrl: doc.pdfPath
+        ? (doc.pdfPublicUrl ?? storageService.toPublicUrl(doc.pdfPath))
+        : null,
 
       errorMessage: doc.errorMessage,
 

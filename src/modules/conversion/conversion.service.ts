@@ -163,11 +163,11 @@ export class ConversionService {
 
     // await updateProgress("done", 100);
 
-    await storageService.syncDocumentAssetsIfConfigured(documentId);
-    await documentService.persistSupabasePublicUrls(documentId);
-
-    // cleanup local temp files
-    await storageService.cleanupLocalDocument(documentId);
+    if (storageService.isSupabaseConfigured()) {
+      await storageService.syncDocumentAssetsIfConfigured(documentId);
+      await documentService.persistSupabasePublicUrls(documentId);
+      await storageService.cleanupLocalDocument(documentId);
+    }
 
     await updateProgress("done", 100);
   }

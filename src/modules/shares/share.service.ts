@@ -162,15 +162,20 @@ export class ShareService {
       ok: true as const,
       documentId: share.documentId,
       pageCount: pages.length,
-      pages: pages.map((page) => ({
-        pageIndex: page.pageIndex,
-        imageUrl: `${env.PUBLIC_BASE_URL.replace(/\/$/, '')}/shares/${share.token}/files/${path.relative(storageService.getDocumentDir(share.documentId), page.imagePath).replaceAll('\\', '/')}`,
-        thumbUrl: page.thumbPath
+      pages: pages.map((page) => {
+        const imageFileUrl = `${env.PUBLIC_BASE_URL.replace(/\/$/, '')}/shares/${share.token}/files/${path.relative(storageService.getDocumentDir(share.documentId), page.imagePath).replaceAll('\\', '/')}`
+        const thumbFileUrl = page.thumbPath
           ? `${env.PUBLIC_BASE_URL.replace(/\/$/, '')}/shares/${share.token}/files/${path.relative(storageService.getDocumentDir(share.documentId), page.thumbPath).replaceAll('\\', '/')}`
-          : null,
-        width: page.width,
-        height: page.height,
-      })),
+          : null
+
+        return {
+          pageIndex: page.pageIndex,
+          imageUrl: page.imagePublicUrl ?? imageFileUrl,
+          thumbUrl: page.thumbPublicUrl ?? thumbFileUrl,
+          width: page.width,
+          height: page.height,
+        }
+      }),
     }
   }
 
