@@ -12,7 +12,7 @@ const envSchema = z.object({
   ALLOWED_MIME_TYPES: z.string().min(1),
   STORAGE_ROOT: z.string().default('./storage'),
   FRONTEND_DIST_DIR: z.string().min(1).optional(),
-  PUBLIC_BASE_URL: z.string().url().default('http://localhost:4000'),
+  PUBLIC_BASE_URL: z.string().url().default('http://81.0.220.161:4000'),
   SUPABASE_URL: z.string().url().optional(),
   SUPABASE_STORAGE_BUCKET: z.string().min(1).optional(),
   SUPABASE_IMAGES_BUCKET: z.string().min(1).optional(),
